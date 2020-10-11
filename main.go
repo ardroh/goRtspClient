@@ -1,5 +1,10 @@
 package main
 
+import (
+	"log"
+	"time"
+)
+
 func main() {
 	rtspClient := RtspClient{
 		rtspPath: "axis-media/media.amp",
@@ -8,4 +13,15 @@ func main() {
 		port:     554,
 	}
 	rtspClient.connect()
+	startT := time.Now()
+	for {
+		packet := <-rtspClient.readPacket
+		t := time.Now()
+		elapsed := t.Sub(startT)
+		if elapsed > 10*time.Second {
+			break
+		}
+		log.Printf("Reading %d bytes in %fs.\n", packet.size, elapsed.Seconds())
+	}
+	rtspClient.disconnect()
 }
