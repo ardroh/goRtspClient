@@ -2,10 +2,13 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
+	"time"
 )
 
 type RtpPacket struct {
@@ -14,13 +17,15 @@ type RtpPacket struct {
 }
 
 type RtspClient struct {
-	cSeq       int
-	rtspPath   string
-	ip         string
-	port       int
-	connection net.Conn
-	readPacket chan RtpPacket
-	sessionID  string
+	cSeq          int
+	rtspPath      string
+	ip            string
+	port          int
+	connection    net.Conn
+	readPacket    chan RtpPacket
+	sessionID     string
+	timeout       int
+	lastKeepAlive time.Time
 }
 
 func (client *RtspClient) connect() bool {
@@ -34,8 +39,8 @@ func (client *RtspClient) connect() bool {
 		cseq:    client.getNextCSeq(),
 		address: client.getAddress(),
 	}
-	response := client.send(optionsCmd)
-	if response == nil || response.getStatusCode() != RtspOk {
+	response, sendErr := client.send(optionsCmd)
+	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
 		log.Panicln("Options failed!")
 		return false
 	}
@@ -49,9 +54,9 @@ func (client *RtspClient) connect() bool {
 		address: client.getAddress(),
 		cseq:    client.getNextCSeq(),
 	}
-	response = client.send(describeCmd)
-	if response == nil || response.getStatusCode() != RtspOk {
-		log.Panicln("Describe failed!")
+	response, sendErr = client.send(describeCmd)
+	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+		log.Panicln("Options failed!")
 		return false
 	}
 	setupCmd := RtspSetupCommand{
@@ -64,43 +69,45 @@ func (client *RtspClient) connect() bool {
 			rangeMax: 1,
 		},
 	}
-	response = client.send(setupCmd)
-	if response == nil || response.getStatusCode() != RtspOk {
-		log.Panicln("Setup failed!")
+	response, sendErr = client.send(setupCmd)
+	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+		log.Panicln("Options failed!")
 		return false
 	}
 	setupResp := RtspSetupResponse{
 		rtspResponse: *response,
 	}
 	client.sessionID = setupResp.getSession()
+	client.timeout = setupResp.getTimeout()
 	playCmd := RtspPlayCommand{
 		address:   client.getAddress(),
 		cseq:      client.getNextCSeq(),
 		sessionID: setupResp.getSession(),
 	}
-	response = client.send(playCmd)
-	if response == nil || response.getStatusCode() != RtspOk {
-		log.Panicln("Setup failed!")
+	response, sendErr = client.send(playCmd)
+	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+		log.Panicln("Options failed!")
 		return false
 	}
 	client.readPacket = make(chan RtpPacket)
 	go client.startReading()
+	go client.keepAlive()
 	return true
 }
 
-func (client *RtspClient) disconnect() bool {
+func (client *RtspClient) disconnect() error {
 	teardownCmd := RtspTeardownCommand{
 		address:   client.getAddress(),
 		cseq:      client.getNextCSeq(),
 		sessionID: client.sessionID,
 	}
-	response := client.send(teardownCmd)
-	if response == nil || response.getStatusCode() != RtspOk {
-		log.Panicln("Setup failed!")
-		return false
+	response, sendErr := client.send(teardownCmd)
+	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+		log.Panicln("Options failed!")
+		return sendErr
 	}
 	client.connection.Close()
-	return true
+	return nil
 }
 
 func (client *RtspClient) getNextCSeq() int {
@@ -131,30 +138,58 @@ func readResponse(conn net.Conn, responseChan chan string) {
 	close(responseChan)
 }
 
-func (client *RtspClient) send(rtspCommand RtspCommand) *RtspResponse {
+func (client *RtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
 	if client.connection == nil {
 		log.Panicln("Not connected!")
-		return nil
+		return nil, errors.New("not connected")
 	}
 	log.Println(rtspCommand.String())
-	fmt.Fprintf(client.connection, rtspCommand.String())
+	_, err := fmt.Fprintf(client.connection, rtspCommand.String())
+	if err != nil {
+		return nil, err
+	}
 	responseChan := make(chan string)
 	go readResponse(client.connection, responseChan)
 	response := RtspResponse{
 		OriginalString: <-responseChan,
 	}
 	log.Println(response.OriginalString)
-	return &response
+	return &response, nil
 }
 
 func (client *RtspClient) startReading() {
 	reader := bufio.NewReader(client.connection)
 	for {
 		buffer := make([]byte, 1024)
-		bytesRead, _ := reader.Read(buffer)
+		bytesRead, err := reader.Read(buffer)
+		if err == io.EOF {
+			return
+		}
 		client.readPacket <- RtpPacket{
 			buffer: buffer,
 			size:   bytesRead,
 		}
+	}
+}
+
+func (client *RtspClient) keepAlive() {
+	client.lastKeepAlive = time.Now()
+	for {
+		t := time.Now()
+		elapsed := t.Sub(client.lastKeepAlive)
+		if elapsed < time.Duration(client.timeout/2)*time.Second {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		optionsCmd := RtspOptionsCommand{
+			cseq:    client.getNextCSeq(),
+			address: client.getAddress(),
+		}
+		_, err := client.send(optionsCmd)
+		if err != nil {
+			log.Println("Error on send keepalive. Exiting loop.")
+			return
+		}
+		client.lastKeepAlive = time.Now()
 	}
 }

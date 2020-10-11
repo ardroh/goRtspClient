@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 type RtspSetupResponse struct {
@@ -17,6 +19,21 @@ func (setupResp RtspSetupResponse) getSsrc() string {
 		return ""
 	}
 	return matches[2]
+}
+
+func (setupResp RtspSetupResponse) getTimeout() int {
+	r, _ := regexp.Compile("Session:(.+?)timeout=(.*)")
+	matches := r.FindStringSubmatch(setupResp.rtspResponse.OriginalString)
+	if len(matches) < 1 {
+		log.Panicln("Can't get session!")
+		return -1
+	}
+	num, err := strconv.Atoi(strings.TrimSpace(matches[2]))
+	if err != nil {
+		log.Panicln(err)
+		return -1
+	}
+	return num
 }
 
 func (setupResp RtspSetupResponse) getSession() string {
