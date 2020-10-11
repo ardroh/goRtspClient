@@ -17,8 +17,11 @@ go get https://github.com/ardroh/goRtspClient
 		ip:       "192.168.0.10",
 		port:     554,
     }
+
 	rtspClient.connect()
+    
     //(...)
+    
     rtspClient.disconnect()
 ```
 
