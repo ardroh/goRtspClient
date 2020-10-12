@@ -1,4 +1,4 @@
-package goRtspClient
+package responses
 
 import (
 	"log"
@@ -11,7 +11,7 @@ type RtspResponse struct {
 	OriginalString string
 }
 
-func (response *RtspResponse) getCSeq() int {
+func (response *RtspResponse) GetCSeq() int {
 	r, _ := regexp.Compile("CSeq: (.*?)\n")
 	matches := r.FindStringSubmatch(response.OriginalString)
 	num, err := strconv.Atoi(strings.TrimSpace(matches[1]))
@@ -22,7 +22,7 @@ func (response *RtspResponse) getCSeq() int {
 	return num
 }
 
-func (response *RtspResponse) getStatusCode() RtspResponseCodes {
+func (response *RtspResponse) GetStatusCode() RtspResponseCodes {
 	r, _ := regexp.Compile("(RTSP/1.0) (.*?) (.*)")
 	matches := r.FindStringSubmatch(response.OriginalString)
 	if len(matches) < 1 {
@@ -36,19 +36,3 @@ func (response *RtspResponse) getStatusCode() RtspResponseCodes {
 	}
 	return RtspResponseCodes(num)
 }
-
-// type RtspResponseBaseData struct {
-// 	CSeq int
-// }
-
-// type RtspResponse interface {
-// 	getBaseData() RtspResponseBaseData
-// }
-
-// type RtspOptionsResponse struct {
-// 	baseData RtspResponseBaseData
-// }
-
-// func (options RtspOptionsResponse) getBaseData() RtspResponseBaseData {
-// 	return options.baseData
-// }

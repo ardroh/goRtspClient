@@ -1,4 +1,4 @@
-package goRtspClient
+package responses
 
 import (
 	"log"
@@ -11,7 +11,13 @@ type RtspSetupResponse struct {
 	rtspResponse RtspResponse
 }
 
-func (setupResp RtspSetupResponse) getSsrc() string {
+func InitRtspSetupResponse(rtspResponse RtspResponse) *RtspSetupResponse {
+	return &RtspSetupResponse{
+		rtspResponse: rtspResponse,
+	}
+}
+
+func (setupResp RtspSetupResponse) GetSsrc() string {
 	r, _ := regexp.Compile("Transport:(.+?);ssrc=(.*?);")
 	matches := r.FindStringSubmatch(setupResp.rtspResponse.OriginalString)
 	if len(matches) < 1 {
@@ -21,7 +27,7 @@ func (setupResp RtspSetupResponse) getSsrc() string {
 	return matches[2]
 }
 
-func (setupResp RtspSetupResponse) getTimeout() int {
+func (setupResp RtspSetupResponse) GetTimeout() int {
 	r, _ := regexp.Compile("Session:(.+?)timeout=(.*)")
 	matches := r.FindStringSubmatch(setupResp.rtspResponse.OriginalString)
 	if len(matches) < 1 {
@@ -36,7 +42,7 @@ func (setupResp RtspSetupResponse) getTimeout() int {
 	return num
 }
 
-func (setupResp RtspSetupResponse) getSession() string {
+func (setupResp RtspSetupResponse) GetSession() string {
 	r, _ := regexp.Compile("Session: (.+?);")
 	matches := r.FindStringSubmatch(setupResp.rtspResponse.OriginalString)
 	if len(matches) < 1 {

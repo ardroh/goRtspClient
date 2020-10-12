@@ -1,4 +1,4 @@
-package goRtspClient
+package responses
 
 type RtspResponseCodes int
 

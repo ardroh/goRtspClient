@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ardroh/goRtspClient/commands"
+	"github.com/ardroh/goRtspClient/responses"
 	"github.com/ardroh/goRtspClient/rtp"
 )
 
@@ -45,57 +47,53 @@ func (client *rtspClient) Connect() bool {
 		return false
 	}
 	client.connection = conn
-	optionsCmd := RtspOptionsCommand{
-		cseq:    client.getNextCSeq(),
-		address: client.getAddress(),
+	optionsCmd := commands.RtspOptionsCommand{
+		Cseq:    client.getNextCSeq(),
+		Address: client.getAddress(),
 	}
 	response, sendErr := client.send(optionsCmd)
-	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return false
 	}
-	optionsResp := RtspOptionsResponse{
-		rtspResponse: *response,
-	}
-	if !optionsResp.isMethodAvailable(Describe) {
+	optionsResp := responses.InitRtspOptionsResponse(*response)
+	if !optionsResp.IsMethodAvailable(commands.Describe) {
 		return false
 	}
-	describeCmd := RtspDescribeCommand{
-		address: client.getAddress(),
-		cseq:    client.getNextCSeq(),
+	describeCmd := commands.RtspDescribeCommand{
+		Address: client.getAddress(),
+		Cseq:    client.getNextCSeq(),
 	}
 	response, sendErr = client.send(describeCmd)
-	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return false
 	}
-	setupCmd := RtspSetupCommand{
-		address:      client.getAddress(),
-		cseq:         client.getNextCSeq(),
-		transport:    RtpAvpTcp,
-		transmission: Unicast,
-		interleavedPair: InterleavedPair{
-			rangeMin: 0,
-			rangeMax: 1,
+	setupCmd := commands.RtspSetupCommand{
+		Address:      client.getAddress(),
+		Cseq:         client.getNextCSeq(),
+		Transport:    commands.RtpAvpTcp,
+		Transmission: commands.Unicast,
+		InterleavedPair: commands.InterleavedPair{
+			RangeMin: 0,
+			RangeMax: 1,
 		},
 	}
 	response, sendErr = client.send(setupCmd)
-	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return false
 	}
-	setupResp := RtspSetupResponse{
-		rtspResponse: *response,
-	}
-	client.sessionID = setupResp.getSession()
-	client.timeout = setupResp.getTimeout()
-	playCmd := RtspPlayCommand{
-		address:   client.getAddress(),
-		cseq:      client.getNextCSeq(),
-		sessionID: setupResp.getSession(),
+	setupResp := responses.InitRtspSetupResponse(*response)
+	client.sessionID = setupResp.GetSession()
+	client.timeout = setupResp.GetTimeout()
+	playCmd := commands.RtspPlayCommand{
+		Address:   client.getAddress(),
+		Cseq:      client.getNextCSeq(),
+		SessionID: setupResp.GetSession(),
 	}
 	response, sendErr = client.send(playCmd)
-	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return false
 	}
@@ -106,13 +104,13 @@ func (client *rtspClient) Connect() bool {
 }
 
 func (client *rtspClient) Disconnect() error {
-	teardownCmd := RtspTeardownCommand{
-		address:   client.getAddress(),
-		cseq:      client.getNextCSeq(),
-		sessionID: client.sessionID,
+	teardownCmd := commands.RtspTeardownCommand{
+		Address:   client.getAddress(),
+		Cseq:      client.getNextCSeq(),
+		SessionID: client.sessionID,
 	}
 	response, sendErr := client.send(teardownCmd)
-	if sendErr != nil || response == nil || response.getStatusCode() != RtspOk {
+	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return sendErr
 	}
@@ -148,7 +146,7 @@ func readResponse(conn net.Conn, responseChan chan string) {
 	close(responseChan)
 }
 
-func (client *rtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
+func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.RtspResponse, error) {
 	if client.connection == nil {
 		log.Panicln("Not connected!")
 		return nil, errors.New("not connected")
@@ -160,7 +158,7 @@ func (client *rtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
 	}
 	responseChan := make(chan string)
 	go readResponse(client.connection, responseChan)
-	response := RtspResponse{
+	response := responses.RtspResponse{
 		OriginalString: <-responseChan,
 	}
 	log.Println(response.OriginalString)
@@ -191,9 +189,9 @@ func (client *rtspClient) keepAlive() {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		optionsCmd := RtspOptionsCommand{
-			cseq:    client.getNextCSeq(),
-			address: client.getAddress(),
+		optionsCmd := commands.RtspOptionsCommand{
+			Cseq:    client.getNextCSeq(),
+			Address: client.getAddress(),
 		}
 		_, err := client.send(optionsCmd)
 		if err != nil {

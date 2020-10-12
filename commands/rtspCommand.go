@@ -1,4 +1,4 @@
-package goRtspClient
+package commands
 
 type RtspCommand interface {
 	String() string
