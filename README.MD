@@ -11,13 +11,11 @@ go get https://github.com/ardroh/goRtspClient
 ## Usage
 
 ```go
-	rtspClient := goRtspClient.InitRtspClient("192.168.0.10", 554, "some-path")
+rtspClient := goRtspClient.InitRtspClient("192.168.0.10", 554, "some-path")
 
-	rtspClient.connect()
-    
-    //(...)
-    
-    rtspClient.disconnect()
+rtspClient.connect()
+//(...)
+rtspClient.disconnect()
 ```
 
 ## Contributing
