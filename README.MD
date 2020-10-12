@@ -11,12 +11,7 @@ go get https://github.com/ardroh/goRtspClient
 ## Usage
 
 ```go
-    rtspClient := RtspClient{
-		rtspPath: "some-path",
-		cSeq:     0,
-		ip:       "192.168.0.10",
-		port:     554,
-    }
+	rtspClient := goRtspClient.InitRtspClient("192.168.0.10", 554, "some-path")
 
 	rtspClient.connect()
     
