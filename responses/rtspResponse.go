@@ -12,6 +12,9 @@ type RtspResponse struct {
 }
 
 func (response *RtspResponse) GetCSeq() int {
+	if len(response.OriginalString) == 0 {
+		return -1
+	}
 	r, _ := regexp.Compile("CSeq: (.*?)\n")
 	matches := r.FindStringSubmatch(response.OriginalString)
 	num, err := strconv.Atoi(strings.TrimSpace(matches[1]))

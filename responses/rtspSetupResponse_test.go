@@ -15,11 +15,11 @@ Date: Sun, 11 Oct 2020 14:46:29 GMT`
 		},
 	}
 
-	if sut.getTimeout() != 60 {
+	if sut.GetTimeout() != 60 {
 		t.Errorf("Failed to parse timeout!")
 	}
 
-	if sut.getSession() != "LZoqIul0P3odd1lb" {
+	if sut.GetSession() != "LZoqIul0P3odd1lb" {
 		t.Errorf("Failed to parse session!")
 	}
 }
