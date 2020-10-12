@@ -9,16 +9,9 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/ardroh/goRtspClient/rtp"
 )
-
-type RtpPacket struct {
-	buffer []byte
-	size   int
-}
-
-func (packet *RtpPacket) GetBuffer() ([]byte, int) {
-	return packet.buffer, packet.size
-}
 
 type rtspClient struct {
 	cSeq          int
@@ -26,7 +19,7 @@ type rtspClient struct {
 	ip            string
 	port          int
 	connection    net.Conn
-	readPacket    chan RtpPacket
+	readPacket    chan rtp.RtpPacket
 	sessionID     string
 	timeout       int
 	lastKeepAlive time.Time
@@ -41,7 +34,7 @@ func InitRtspClient(ip string, port int, path string) *rtspClient {
 	}
 }
 
-func (client *rtspClient) GetReadChan() chan RtpPacket {
+func (client *rtspClient) GetReadChan() chan rtp.RtpPacket {
 	return client.readPacket
 }
 
@@ -106,7 +99,7 @@ func (client *rtspClient) Connect() bool {
 		log.Panicln("Options failed!")
 		return false
 	}
-	client.readPacket = make(chan RtpPacket)
+	client.readPacket = make(chan rtp.RtpPacket)
 	go client.startReading()
 	go client.keepAlive()
 	return true
@@ -182,9 +175,9 @@ func (client *rtspClient) startReading() {
 		if err == io.EOF {
 			return
 		}
-		client.readPacket <- RtpPacket{
-			buffer: buffer,
-			size:   bytesRead,
+		client.readPacket <- rtp.RtpPacket{
+			Buffer: buffer,
+			Size:   bytesRead,
 		}
 	}
 }
