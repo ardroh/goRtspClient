@@ -1,4 +1,4 @@
-package main
+package goRtspClient
 
 import (
 	"bufio"
@@ -16,6 +16,10 @@ type RtpPacket struct {
 	size   int
 }
 
+func (packet *RtpPacket) GetBuffer() ([]byte, int) {
+	return packet.buffer, packet.size
+}
+
 type RtspClient struct {
 	cSeq          int
 	rtspPath      string
@@ -28,7 +32,20 @@ type RtspClient struct {
 	lastKeepAlive time.Time
 }
 
-func (client *RtspClient) connect() bool {
+func InitRtspClient(ip string, port int, path string) *RtspClient {
+	return &RtspClient{
+		cSeq:     0,
+		ip:       ip,
+		port:     port,
+		rtspPath: path,
+	}
+}
+
+func (client *RtspClient) GetReadChan() chan RtpPacket {
+	return client.readPacket
+}
+
+func (client *RtspClient) Connect() bool {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", client.ip, client.port))
 	if err != nil {
 		log.Panicln(err)
@@ -95,7 +112,7 @@ func (client *RtspClient) connect() bool {
 	return true
 }
 
-func (client *RtspClient) disconnect() error {
+func (client *RtspClient) Disconnect() error {
 	teardownCmd := RtspTeardownCommand{
 		address:   client.getAddress(),
 		cseq:      client.getNextCSeq(),
