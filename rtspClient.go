@@ -20,7 +20,7 @@ func (packet *RtpPacket) GetBuffer() ([]byte, int) {
 	return packet.buffer, packet.size
 }
 
-type RtspClient struct {
+type rtspClient struct {
 	cSeq          int
 	rtspPath      string
 	ip            string
@@ -32,8 +32,8 @@ type RtspClient struct {
 	lastKeepAlive time.Time
 }
 
-func InitRtspClient(ip string, port int, path string) *RtspClient {
-	return &RtspClient{
+func InitRtspClient(ip string, port int, path string) *rtspClient {
+	return &rtspClient{
 		cSeq:     0,
 		ip:       ip,
 		port:     port,
@@ -41,11 +41,11 @@ func InitRtspClient(ip string, port int, path string) *RtspClient {
 	}
 }
 
-func (client *RtspClient) GetReadChan() chan RtpPacket {
+func (client *rtspClient) GetReadChan() chan RtpPacket {
 	return client.readPacket
 }
 
-func (client *RtspClient) Connect() bool {
+func (client *rtspClient) Connect() bool {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", client.ip, client.port))
 	if err != nil {
 		log.Panicln(err)
@@ -112,7 +112,7 @@ func (client *RtspClient) Connect() bool {
 	return true
 }
 
-func (client *RtspClient) Disconnect() error {
+func (client *rtspClient) Disconnect() error {
 	teardownCmd := RtspTeardownCommand{
 		address:   client.getAddress(),
 		cseq:      client.getNextCSeq(),
@@ -127,12 +127,12 @@ func (client *RtspClient) Disconnect() error {
 	return nil
 }
 
-func (client *RtspClient) getNextCSeq() int {
+func (client *rtspClient) getNextCSeq() int {
 	client.cSeq++
 	return client.cSeq
 }
 
-func (client *RtspClient) getAddress() string {
+func (client *rtspClient) getAddress() string {
 	return fmt.Sprintf("rtsp://%s:%d/%s", client.ip, client.port, client.rtspPath)
 }
 
@@ -155,7 +155,7 @@ func readResponse(conn net.Conn, responseChan chan string) {
 	close(responseChan)
 }
 
-func (client *RtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
+func (client *rtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
 	if client.connection == nil {
 		log.Panicln("Not connected!")
 		return nil, errors.New("not connected")
@@ -174,7 +174,7 @@ func (client *RtspClient) send(rtspCommand RtspCommand) (*RtspResponse, error) {
 	return &response, nil
 }
 
-func (client *RtspClient) startReading() {
+func (client *rtspClient) startReading() {
 	reader := bufio.NewReader(client.connection)
 	for {
 		buffer := make([]byte, 1024)
@@ -189,7 +189,7 @@ func (client *RtspClient) startReading() {
 	}
 }
 
-func (client *RtspClient) keepAlive() {
+func (client *rtspClient) keepAlive() {
 	client.lastKeepAlive = time.Now()
 	for {
 		t := time.Now()
