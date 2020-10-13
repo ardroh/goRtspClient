@@ -15,24 +15,27 @@ import (
 	"github.com/ardroh/goRtspClient/rtp"
 )
 
-type rtspClient struct {
-	cSeq          int
-	rtspPath      string
-	ip            string
-	port          int
-	connection    net.Conn
-	readPacket    chan rtp.RtpPacket
-	sessionID     string
-	timeout       int
-	lastKeepAlive time.Time
+type RtspConnectionParams struct {
+	IP           string
+	Port         int
+	Path         string
+	Transmission commands.RtspTransmissionType
+	Transport    commands.RtspTransportType
 }
 
-func InitRtspClient(ip string, port int, path string) *rtspClient {
+type rtspClient struct {
+	cSeq             int
+	connection       net.Conn
+	readPacket       chan rtp.RtpPacket
+	sessionID        string
+	timeout          int
+	lastKeepAlive    time.Time
+	connectionParams RtspConnectionParams
+}
+
+func InitRtspClient(params RtspConnectionParams) *rtspClient {
 	return &rtspClient{
-		cSeq:     0,
-		ip:       ip,
-		port:     port,
-		rtspPath: path,
+		connectionParams: params,
 	}
 }
 
@@ -40,11 +43,10 @@ func (client *rtspClient) GetReadChan() chan rtp.RtpPacket {
 	return client.readPacket
 }
 
-func (client *rtspClient) Connect() bool {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", client.ip, client.port))
+func (client *rtspClient) Connect() error {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", client.connectionParams.IP, client.connectionParams.Port))
 	if err != nil {
-		log.Panicln(err)
-		return false
+		return err
 	}
 	client.connection = conn
 	optionsCmd := commands.RtspOptionsCommand{
@@ -53,12 +55,11 @@ func (client *rtspClient) Connect() bool {
 	}
 	response, sendErr := client.send(optionsCmd)
 	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
-		log.Panicln("Options failed!")
-		return false
+		return sendErr
 	}
 	optionsResp := responses.InitRtspOptionsResponse(*response)
 	if !optionsResp.IsMethodAvailable(commands.Describe) {
-		return false
+		return sendErr
 	}
 	describeCmd := commands.RtspDescribeCommand{
 		Address: client.getAddress(),
@@ -66,14 +67,16 @@ func (client *rtspClient) Connect() bool {
 	}
 	response, sendErr = client.send(describeCmd)
 	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
-		log.Panicln("Options failed!")
-		return false
+		return sendErr
+	}
+	if client.connectionParams.Transport != commands.RtpAvpTcp || client.connectionParams.Transmission != commands.Unicast {
+		return errors.New("unsupported transport or transmission")
 	}
 	setupCmd := commands.RtspSetupCommand{
 		Address:      client.getAddress(),
 		Cseq:         client.getNextCSeq(),
-		Transport:    commands.RtpAvpTcp,
-		Transmission: commands.Unicast,
+		Transport:    client.connectionParams.Transport,
+		Transmission: client.connectionParams.Transmission,
 		InterleavedPair: commands.InterleavedPair{
 			RangeMin: 0,
 			RangeMax: 1,
@@ -81,8 +84,7 @@ func (client *rtspClient) Connect() bool {
 	}
 	response, sendErr = client.send(setupCmd)
 	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
-		log.Panicln("Options failed!")
-		return false
+		return sendErr
 	}
 	setupResp := responses.InitRtspSetupResponse(*response)
 	client.sessionID = setupResp.GetSession()
@@ -94,13 +96,12 @@ func (client *rtspClient) Connect() bool {
 	}
 	response, sendErr = client.send(playCmd)
 	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
-		log.Panicln("Options failed!")
-		return false
+		return sendErr
 	}
 	client.readPacket = make(chan rtp.RtpPacket)
 	go client.startReading()
 	go client.keepAlive()
-	return true
+	return nil
 }
 
 func (client *rtspClient) Disconnect() error {
@@ -124,7 +125,7 @@ func (client *rtspClient) getNextCSeq() int {
 }
 
 func (client *rtspClient) getAddress() string {
-	return fmt.Sprintf("rtsp://%s:%d/%s", client.ip, client.port, client.rtspPath)
+	return fmt.Sprintf("rtsp://%s:%d/%s", client.connectionParams.IP, client.connectionParams.Port, client.connectionParams.Path)
 }
 
 func readResponse(conn net.Conn, responseChan chan string) {
