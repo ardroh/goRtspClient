@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ardroh/goRtspClient/auth"
 	"github.com/ardroh/goRtspClient/commands"
 	"github.com/ardroh/goRtspClient/responses"
 	"github.com/ardroh/goRtspClient/rtp"
@@ -21,6 +22,7 @@ type RtspConnectionParams struct {
 	Path         string
 	Transmission commands.RtspTransmissionType
 	Transport    commands.RtspTransportType
+	Credentials  auth.Credentials
 }
 
 type rtspClient struct {
@@ -31,6 +33,7 @@ type rtspClient struct {
 	timeout          int
 	lastKeepAlive    time.Time
 	connectionParams RtspConnectionParams
+	authHeader       auth.RtspAuthHeader
 }
 
 func InitRtspClient(params RtspConnectionParams) *rtspClient {
@@ -49,32 +52,24 @@ func (client *rtspClient) Connect() error {
 		return err
 	}
 	client.connection = conn
-	optionsCmd := commands.RtspOptionsCommand{
-		Cseq:    client.getNextCSeq(),
-		Address: client.getAddress(),
-	}
+	optionsCmd := commands.RtspOptionsCommand{}
 	response, sendErr := client.send(optionsCmd)
-	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
 	optionsResp := responses.InitRtspOptionsResponse(*response)
 	if !optionsResp.IsMethodAvailable(commands.Describe) {
 		return sendErr
 	}
-	describeCmd := commands.RtspDescribeCommand{
-		Address: client.getAddress(),
-		Cseq:    client.getNextCSeq(),
-	}
+	describeCmd := commands.RtspDescribeCommand{}
 	response, sendErr = client.send(describeCmd)
-	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
 	if client.connectionParams.Transport != commands.RtpAvpTcp || client.connectionParams.Transmission != commands.Unicast {
 		return errors.New("unsupported transport or transmission")
 	}
 	setupCmd := commands.RtspSetupCommand{
-		Address:      client.getAddress(),
-		Cseq:         client.getNextCSeq(),
 		Transport:    client.connectionParams.Transport,
 		Transmission: client.connectionParams.Transmission,
 		InterleavedPair: commands.InterleavedPair{
@@ -83,19 +78,17 @@ func (client *rtspClient) Connect() error {
 		},
 	}
 	response, sendErr = client.send(setupCmd)
-	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
 	setupResp := responses.InitRtspSetupResponse(*response)
 	client.sessionID = setupResp.GetSession()
 	client.timeout = setupResp.GetTimeout()
 	playCmd := commands.RtspPlayCommand{
-		Address:   client.getAddress(),
-		Cseq:      client.getNextCSeq(),
 		SessionID: setupResp.GetSession(),
 	}
 	response, sendErr = client.send(playCmd)
-	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
 	client.readPacket = make(chan rtp.RtpPacket)
@@ -106,12 +99,10 @@ func (client *rtspClient) Connect() error {
 
 func (client *rtspClient) Disconnect() error {
 	teardownCmd := commands.RtspTeardownCommand{
-		Address:   client.getAddress(),
-		Cseq:      client.getNextCSeq(),
 		SessionID: client.sessionID,
 	}
 	response, sendErr := client.send(teardownCmd)
-	if sendErr != nil || response == nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return sendErr
 	}
@@ -152,8 +143,14 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 		log.Panicln("Not connected!")
 		return nil, errors.New("not connected")
 	}
-	log.Println(rtspCommand.String())
-	_, err := fmt.Fprintf(client.connection, rtspCommand.String())
+	commandBuilder := commands.RtspCommandBuilder{
+		Cseq:        client.getNextCSeq(),
+		Address:     client.getAddress(),
+		AuthHeader:  client.authHeader,
+		RtspCommand: rtspCommand,
+	}
+	log.Println(commandBuilder.BuildString())
+	_, err := fmt.Fprintf(client.connection, commandBuilder.BuildString())
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +158,11 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 	go readResponse(client.connection, responseChan)
 	response := responses.RtspResponse{
 		OriginalString: <-responseChan,
+	}
+	if response.GetStatusCode() == responses.RtspUnauthorized {
+		authRequest := response.GetRtspAuthType()
+		client.authHeader = auth.BuildRtspAuthHeader(authRequest, client.connectionParams.Credentials)
+		return client.send(rtspCommand) //retry
 	}
 	log.Println(response.OriginalString)
 	return &response, nil
@@ -190,10 +192,7 @@ func (client *rtspClient) keepAlive() {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		optionsCmd := commands.RtspOptionsCommand{
-			Cseq:    client.getNextCSeq(),
-			Address: client.getAddress(),
-		}
+		optionsCmd := commands.RtspOptionsCommand{}
 		_, err := client.send(optionsCmd)
 		if err != nil {
 			log.Println("Error on send keepalive. Exiting loop.")

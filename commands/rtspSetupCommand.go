@@ -30,24 +30,24 @@ type InterleavedPair struct {
 }
 
 type RtspSetupCommand struct {
-	Address         string
-	Cseq            int
 	Transport       RtspTransportType
 	Transmission    RtspTransmissionType
 	RtpPort         PortPool
 	InterleavedPair InterleavedPair
 }
 
-func (setup RtspSetupCommand) String() string {
+func (cmd RtspSetupCommand) GetCommandType() RtspCommandType {
+	return RtspSetup
+}
+
+func (cmd RtspSetupCommand) GetParamsString() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("SETUP %s RTSP/1.0\n", setup.Address))
-	sb.WriteString(fmt.Sprintf("CSeq: %d\n", setup.Cseq))
-	sb.WriteString(fmt.Sprintf("Transport: %s;%s;", setup.Transport, setup.Transmission))
-	if setup.Transport == RtpAvp {
-		sb.WriteString(fmt.Sprintf("client_port=%d-%d", setup.RtpPort.RtpPort, setup.RtpPort.RtcpPort))
-	} else if setup.Transport == RtpAvpTcp {
-		sb.WriteString(fmt.Sprintf("interleaved=%d-%d", setup.InterleavedPair.RangeMin, setup.InterleavedPair.RangeMax))
+	sb.WriteString(fmt.Sprintf("Transport: %s;%s;", cmd.Transport, cmd.Transmission))
+	if cmd.Transport == RtpAvp {
+		sb.WriteString(fmt.Sprintf("client_port=%d-%d", cmd.RtpPort.RtpPort, cmd.RtpPort.RtcpPort))
+	} else if cmd.Transport == RtpAvpTcp {
+		sb.WriteString(fmt.Sprintf("interleaved=%d-%d", cmd.InterleavedPair.RangeMin, cmd.InterleavedPair.RangeMax))
 	}
-	sb.WriteString("\n\n")
+	sb.WriteString("\n")
 	return sb.String()
 }

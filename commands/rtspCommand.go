@@ -1,18 +1,16 @@
 package commands
 
-type RtspCommand interface {
-	String() string
-}
-
-type RtspCommandTypes string
+type RtspCommandType string
 
 const (
-	Options      RtspCommandTypes = "OPTIONS"
-	Describe                      = "DESCRIBE"
-	GetParameter                  = "GET_PARAMETER"
-	Pause                         = "PAUSE"
-	Play                          = "Play"
-	Setup                         = "Setup"
-	SetParameter                  = "SET_PARAMETER"
-	Teardown                      = "TEARDOWN"
+	RtspOptions  RtspCommandType = "OPTIONS"
+	RtspDescribe                 = "DESCRIBE"
+	RtspSetup                    = "SETUP"
+	RtspPlay                     = "PLAY"
+	RtspTeardown                 = "TEARDOWN"
 )
+
+type RtspCommand interface {
+	GetCommandType() RtspCommandType
+	GetParamsString() string
+}
