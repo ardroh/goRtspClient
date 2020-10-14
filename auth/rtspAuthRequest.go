@@ -12,4 +12,5 @@ type RtspAuthRequest struct {
 	AuthType RtspAuthType
 	Realm    string
 	Nonce    string
+	Address  string
 }

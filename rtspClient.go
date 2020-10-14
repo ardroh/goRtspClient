@@ -33,6 +33,8 @@ type rtspClient struct {
 	lastKeepAlive    time.Time
 	connectionParams RtspConnectionParams
 	authHeader       auth.RtspAuthHeader
+	contentBase      *string
+	controlUri       *string
 }
 
 func InitRtspClient(params RtspConnectionParams) *rtspClient {
@@ -64,6 +66,14 @@ func (client *rtspClient) Connect() error {
 	response, sendErr = client.send(describeCmd)
 	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
+	}
+	describeResp := responses.InitRtspDescribeResponse(*response)
+	if describeResp.GetContentBase() != nil {
+		client.contentBase = describeResp.GetContentBase()
+	}
+	controlUris := describeResp.GetControlUris()
+	if len(controlUris) > 0 {
+		client.controlUri = &controlUris[len(controlUris)-1]
 	}
 	if client.connectionParams.Transport != commands.RtpAvpTcp || client.connectionParams.Transmission != commands.Unicast {
 		return errors.New("unsupported transport or transmission")
@@ -152,11 +162,16 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 		log.Panicln("Not connected!")
 		return nil, errors.New("not connected")
 	}
+	address := client.getAddress()
+	if rtspCommand.GetCommandType() == commands.RtspSetup && client.controlUri != nil {
+		address = *client.controlUri
+	}
 	commandBuilder := commands.RtspCommandBuilder{
 		Cseq:        client.getNextCSeq(),
-		Address:     client.getAddress(),
+		Address:     address,
 		AuthHeader:  client.authHeader,
 		RtspCommand: rtspCommand,
+		ContentBase: client.contentBase,
 	}
 	log.Println(commandBuilder.BuildString())
 	_, err := fmt.Fprintf(client.connection, commandBuilder.BuildString())
@@ -170,12 +185,12 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 	response := responses.RtspResponse{
 		OriginalString: *responseString,
 	}
+	log.Println(response.OriginalString)
 	if response.GetStatusCode() == responses.RtspUnauthorized {
 		authRequest := response.GetRtspAuthType()
 		client.authHeader = auth.BuildRtspAuthHeader(authRequest, client.connectionParams.Credentials)
 		return client.send(rtspCommand) //retry
 	}
-	log.Println(response.OriginalString)
 	return &response, nil
 }
 
