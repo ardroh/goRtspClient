@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/ardroh/goRtspClient/auth"
@@ -119,23 +118,33 @@ func (client *rtspClient) getAddress() string {
 	return fmt.Sprintf("rtsp://%s:%d/%s", client.connectionParams.IP, client.connectionParams.Port, client.connectionParams.Path)
 }
 
-func readResponse(conn net.Conn, responseChan chan string) {
-	i := 0
-	reader := bufio.NewReader(conn)
-	var sb strings.Builder
-	for i < 100 {
-		i++
-		lineRead, err := reader.ReadString('\n')
-		if err == nil {
-			sb.WriteString(lineRead)
-		}
-		lineLength := len(lineRead)
-		if lineLength == 2 {
-			responseChan <- sb.String()
-			break
-		}
+func peekIsRtspMessage(reader *bufio.Reader) (bool, error) {
+	peekedBytes, err := reader.Peek(8)
+	if err != nil {
+		return false, err
 	}
-	close(responseChan)
+	peekedLine := string(peekedBytes[:])
+	return peekedLine == "RTSP/1.0", nil
+}
+
+func readResponse(conn net.Conn) (*string, error) {
+	reader := bufio.NewReader(conn)
+	for {
+		isRtspMessage, err := peekIsRtspMessage(reader)
+		if err != nil {
+			return nil, err
+		}
+		if !isRtspMessage {
+			continue
+		}
+		buffer := make([]byte, 2048)
+		len, err := reader.Read(buffer)
+		if err != nil {
+			return nil, err
+		}
+		literalData := string(buffer[:len])
+		return &literalData, nil
+	}
 }
 
 func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.RtspResponse, error) {
@@ -154,10 +163,12 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 	if err != nil {
 		return nil, err
 	}
-	responseChan := make(chan string)
-	go readResponse(client.connection, responseChan)
+	responseString, err := readResponse(client.connection)
+	if err != nil {
+		return nil, err
+	}
 	response := responses.RtspResponse{
-		OriginalString: <-responseChan,
+		OriginalString: *responseString,
 	}
 	if response.GetStatusCode() == responses.RtspUnauthorized {
 		authRequest := response.GetRtspAuthType()
@@ -171,6 +182,13 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 func (client *rtspClient) startReading() {
 	reader := bufio.NewReader(client.connection)
 	for {
+		isRtspMessage, err := peekIsRtspMessage(reader)
+		if err != nil {
+			return
+		}
+		if isRtspMessage {
+			continue
+		}
 		buffer := make([]byte, 1024)
 		bytesRead, err := reader.Read(buffer)
 		if err == io.EOF {
