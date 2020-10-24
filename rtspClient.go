@@ -9,6 +9,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/ardroh/goRtspClient/parsers"
+
 	"github.com/ardroh/goRtspClient/auth"
 	"github.com/ardroh/goRtspClient/commands"
 	"github.com/ardroh/goRtspClient/responses"
@@ -55,7 +57,7 @@ func (client *rtspClient) Connect() error {
 	client.connection = conn
 	optionsCmd := commands.RtspOptionsCommand{}
 	response, sendErr := client.send(optionsCmd)
-	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.StatusCode != responses.RtspOk {
 		return sendErr
 	}
 	optionsResp := responses.InitRtspOptionsResponse(*response)
@@ -64,7 +66,7 @@ func (client *rtspClient) Connect() error {
 	}
 	describeCmd := commands.RtspDescribeCommand{}
 	response, sendErr = client.send(describeCmd)
-	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.StatusCode != responses.RtspOk {
 		return sendErr
 	}
 	describeResp := responses.InitRtspDescribeResponse(*response)
@@ -87,7 +89,7 @@ func (client *rtspClient) Connect() error {
 		},
 	}
 	response, sendErr = client.send(setupCmd)
-	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.StatusCode != responses.RtspOk {
 		return sendErr
 	}
 	setupResp := responses.InitRtspSetupResponse(*response)
@@ -97,7 +99,7 @@ func (client *rtspClient) Connect() error {
 		SessionID: setupResp.GetSession(),
 	}
 	response, sendErr = client.send(playCmd)
-	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.StatusCode != responses.RtspOk {
 		return sendErr
 	}
 	client.readPacket = make(chan rtp.RtpPacket)
@@ -111,7 +113,7 @@ func (client *rtspClient) Disconnect() error {
 		SessionID: client.sessionID,
 	}
 	response, sendErr := client.send(teardownCmd)
-	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
+	if sendErr != nil || response.StatusCode != responses.RtspOk {
 		log.Panicln("Options failed!")
 		return sendErr
 	}
@@ -182,16 +184,17 @@ func (client *rtspClient) send(rtspCommand commands.RtspCommand) (*responses.Rts
 	if err != nil {
 		return nil, err
 	}
-	response := responses.RtspResponse{
-		OriginalString: *responseString,
+	parser := parsers.RtspBaseResponseParser{}
+	response, err := parser.Parse(*responseString)
+	if err != nil {
+		return nil, err
 	}
 	log.Println(response.OriginalString)
-	if response.GetStatusCode() == responses.RtspUnauthorized {
-		authRequest := response.GetRtspAuthType()
-		client.authHeader = auth.BuildRtspAuthHeader(authRequest, client.connectionParams.Credentials)
+	if response.StatusCode == responses.RtspUnauthorized {
+		client.authHeader = auth.BuildRtspAuthHeader(response.AuthRequest, client.connectionParams.Credentials)
 		return client.send(rtspCommand) //retry
 	}
-	return &response, nil
+	return response, nil
 }
 
 func (client *rtspClient) startReading() {
