@@ -1,4 +1,4 @@
-package streams
+package readers
 
 import (
 	"bufio"
@@ -18,21 +18,19 @@ func peekIsRtspMessage(reader *bufio.Reader) (bool, error) {
 	return peekedLine == "RTSP/1.0", nil
 }
 
-type rtspConnReader struct {
+type interleavedReader struct {
 	conn             net.Conn
-	mutex            *sync.Mutex
 	RtpPacketChan    chan rtp.RtpPacket
 	RtspResponseChan chan responses.RtspResponse
 }
 
-func CreateRtspConnReader(conn net.Conn, mutex *sync.Mutex) *rtspConnReader {
-	return &rtspConnReader{
-		conn:  conn,
-		mutex: mutex,
+func CreateRtspConnReader(conn net.Conn, mutex *sync.Mutex) *interleavedReader {
+	return &interleavedReader{
+		conn: conn,
 	}
 }
 
-func (reader *rtspConnReader) StartReading() {
+func (reader *interleavedReader) StartReading() {
 	bufferReader := bufio.NewReader(reader.conn)
 	for {
 		isRtspMessage, err := peekIsRtspMessage(bufferReader)
@@ -41,11 +39,7 @@ func (reader *rtspConnReader) StartReading() {
 		}
 		var len int
 		buffer := make([]byte, 2048)
-		{
-			reader.mutex.Lock()
-			len, err = bufferReader.Read(buffer)
-			reader.mutex.Unlock()
-		}
+		len, err = bufferReader.Read(buffer)
 		if isRtspMessage {
 			reader.handleRtspData(buffer, len)
 		} else {
@@ -54,14 +48,14 @@ func (reader *rtspConnReader) StartReading() {
 	}
 }
 
-func (reader *rtspConnReader) handleBinaryData(buffer []byte, length int) {
+func (reader *interleavedReader) handleBinaryData(buffer []byte, length int) {
 	reader.RtpPacketChan <- rtp.RtpPacket{
 		Buffer: buffer,
 		Size:   length,
 	}
 }
 
-func (reader *rtspConnReader) handleRtspData(buffer []byte, length int) {
+func (reader *interleavedReader) handleRtspData(buffer []byte, length int) {
 	literalData := string(buffer[:length])
 	reader.RtspResponseChan <- responses.RtspResponse{
 		OriginalString: literalData,
