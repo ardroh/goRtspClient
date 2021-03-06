@@ -6,18 +6,18 @@ import (
 )
 
 type RtspDescribeResponse struct {
-	rtspResponse RtspResponse
+	RtspResponse RtspResponse
 }
 
 func InitRtspDescribeResponse(rtspResponse RtspResponse) *RtspDescribeResponse {
 	return &RtspDescribeResponse{
-		rtspResponse: rtspResponse,
+		RtspResponse: rtspResponse,
 	}
 }
 
 func (resp RtspDescribeResponse) GetContentBase() *string {
 	r, _ := regexp.Compile("Content-Base: (.*)")
-	matches := r.FindStringSubmatch(resp.rtspResponse.OriginalString)
+	matches := r.FindStringSubmatch(resp.RtspResponse.OriginalString)
 	if len(matches) < 1 {
 		return nil
 	}
@@ -27,7 +27,7 @@ func (resp RtspDescribeResponse) GetContentBase() *string {
 
 func (resp RtspDescribeResponse) GetControlUris() []string {
 	var uris []string
-	lines := strings.Split(resp.rtspResponse.OriginalString, "\n")
+	lines := strings.Split(resp.RtspResponse.OriginalString, "\n")
 	for _, line := range lines {
 		r, _ := regexp.Compile("a=control:(.*)")
 		matches := r.FindStringSubmatch(line)

@@ -3,41 +3,28 @@ package responses
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ardroh/goRtspClient/auth"
 )
 
 type RtspResponse struct {
 	OriginalString string
-	cseq           int
-	statusCode     RtspResponseCodes
-}
-
-func CreateRtspResponse(originalString string, cseq int, statusCode RtspResponseCodes) *RtspResponse {
-	return &RtspResponse{
-		OriginalString: originalString,
-		cseq:           cseq,
-		statusCode:     statusCode,
-	}
+	StatusCode     RtspResponseCodes
+	Cseq           int
+	ContentType    *string
+	ContentBase    *string
+	Server         *string
+	DateTime       *time.Time
+	ContentLength  int
 }
 
 func (response *RtspResponse) GetCSeq() int {
-	return response.cseq
-	// if len(response.OriginalString) == 0 {
-	// 	return -1
-	// }
-	// r, _ := regexp.Compile("CSeq: (.*?)\n")
-	// matches := r.FindStringSubmatch(response.OriginalString)
-	// num, err := strconv.Atoi(strings.TrimSpace(matches[1]))
-	// if err != nil {
-	// 	log.Panicln(err)
-	// 	return -1
-	// }
-	// return num
+	return response.Cseq
 }
 
 func (response *RtspResponse) GetStatusCode() RtspResponseCodes {
-	return response.statusCode
+	return response.StatusCode
 }
 
 func getRealm(authString string) string {
