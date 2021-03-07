@@ -3,26 +3,19 @@ package responses
 import (
 	"regexp"
 	"strings"
+
+	"github.com/ardroh/goRtspClient/media"
 )
 
 type RtspDescribeResponse struct {
 	RtspResponse RtspResponse
+	MediaInfo    media.MediaInformation
 }
 
 func InitRtspDescribeResponse(rtspResponse RtspResponse) *RtspDescribeResponse {
 	return &RtspDescribeResponse{
 		RtspResponse: rtspResponse,
 	}
-}
-
-func (resp RtspDescribeResponse) GetContentBase() *string {
-	r, _ := regexp.Compile("Content-Base: (.*)")
-	matches := r.FindStringSubmatch(resp.RtspResponse.OriginalString)
-	if len(matches) < 1 {
-		return nil
-	}
-	contentBase := strings.TrimSpace(matches[1])
-	return &contentBase
 }
 
 func (resp RtspDescribeResponse) GetControlUris() []string {

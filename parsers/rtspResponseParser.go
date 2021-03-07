@@ -9,8 +9,8 @@ import (
 type RtspResponseParser struct {
 }
 
-func (parser *RtspResponseParser) Parse(responseLiteral string) (*responses.RtspResponse, error) {
-	response := &responses.RtspResponse{
+func (parser RtspResponseParser) Parse(responseLiteral string) (responses.RtspResponse, error) {
+	response := responses.RtspResponse{
 		OriginalString: responseLiteral,
 	}
 	lines := strings.Split(responseLiteral, "\n")
