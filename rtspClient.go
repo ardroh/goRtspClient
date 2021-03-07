@@ -11,6 +11,7 @@ import (
 
 	"github.com/ardroh/goRtspClient/auth"
 	"github.com/ardroh/goRtspClient/commands"
+	"github.com/ardroh/goRtspClient/parsers"
 	"github.com/ardroh/goRtspClient/responses"
 	"github.com/ardroh/goRtspClient/rtp"
 )
@@ -22,6 +23,10 @@ type RtspConnectionParams struct {
 	Transmission commands.RtspTransmissionType
 	Transport    commands.RtspTransportType
 	Credentials  auth.Credentials
+}
+
+type RtspClient interface {
+	SendCommand(rtspCommand commands.RtspCommand) (*responses.RtspResponse, error)
 }
 
 type rtspClient struct {
@@ -58,7 +63,7 @@ func (client *rtspClient) Connect() error {
 	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
-	optionsResp := responses.InitRtspOptionsResponse(*response)
+	optionsResp, err := parsers.RtspOptionsResponseParser{}.FromBaseResponse(*response)
 	if !optionsResp.IsMethodAvailable(commands.Describe) {
 		return sendErr
 	}
@@ -68,8 +73,8 @@ func (client *rtspClient) Connect() error {
 		return sendErr
 	}
 	describeResp := responses.InitRtspDescribeResponse(*response)
-	if describeResp.GetContentBase() != nil {
-		client.contentBase = describeResp.GetContentBase()
+	if describeResp.RtspResponse.ContentBase != nil {
+		client.contentBase = describeResp.RtspResponse.ContentBase
 	}
 	controlUris := describeResp.GetControlUris()
 	if len(controlUris) > 0 {
