@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func getNumberFromLine(pattern string, line string) int {
-	literal := getStringFromLine(pattern, line)
+func getNumberFromLine(line string, pattern string) int {
+	literal := getStringFromLine(line, pattern)
 	if literal == nil {
 		return 0
 	}
@@ -16,7 +16,7 @@ func getNumberFromLine(pattern string, line string) int {
 	return num
 }
 
-func getStringFromLine(pattern string, line string) *string {
+func getStringFromLine(line string, pattern string) *string {
 	r, _ := regexp.Compile(pattern)
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 2 {
@@ -25,8 +25,8 @@ func getStringFromLine(pattern string, line string) *string {
 	return &matches[1]
 }
 
-func getRtspDateParserFromLine(pattern string, line string) *time.Time {
-	dateTimeLiteral := getStringFromLine(pattern, line)
+func getRtspDateParserFromLine(line string, pattern string) *time.Time {
+	dateTimeLiteral := getStringFromLine(line, pattern)
 	if dateTimeLiteral == nil {
 		return nil
 	}

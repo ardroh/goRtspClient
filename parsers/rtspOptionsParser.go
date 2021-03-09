@@ -27,7 +27,7 @@ func (parser RtspOptionsResponseParser) FromBaseResponse(baseResposne responses.
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Public:") {
-			methods := getStringFromLine("Public: (.*)", line)
+			methods := getStringFromLine(line, "Public: (.*)")
 			if methods == nil {
 				continue
 			}

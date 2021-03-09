@@ -17,20 +17,20 @@ func (parser RtspResponseParser) Parse(responseLiteral string) (responses.RtspRe
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "RTSP/1.0") {
-			num := getNumberFromLine("RTSP/1.0 (.*?) (.*)", line)
+			num := getNumberFromLine(line, "RTSP/1.0 (.*?) (.*)")
 			response.StatusCode = responses.RtspResponseCodes(num)
 		} else if strings.HasPrefix(line, "CSeq:") {
-			response.Cseq = getNumberFromLine("CSeq: (.*)", line)
+			response.Cseq = getNumberFromLine(line, "CSeq: (.*)")
 		} else if strings.HasPrefix(line, "Content-Type") {
-			response.ContentType = getStringFromLine("Content-Type: (.*)", line)
+			response.ContentType = getStringFromLine(line, "Content-Type: (.*)")
 		} else if strings.HasPrefix(line, "Content-Base") {
-			response.ContentBase = getStringFromLine("Content-Base: (.*)", line)
+			response.ContentBase = getStringFromLine(line, "Content-Base: (.*)")
 		} else if strings.HasPrefix(line, "Content-Length:") {
-			response.ContentLength = getNumberFromLine("Content-Length: (.*)", line)
+			response.ContentLength = getNumberFromLine(line, "Content-Length: (.*)")
 		} else if strings.HasPrefix(line, "Server:") {
-			response.Server = getStringFromLine("Server: (.*)", line)
+			response.Server = getStringFromLine(line, "Server: (.*)")
 		} else if strings.HasPrefix(line, "Date:") {
-			response.DateTime = getRtspDateParserFromLine("Date: (.*)", line)
+			response.DateTime = getRtspDateParserFromLine(line, "Date: (.*)")
 		}
 	}
 	return response, nil
