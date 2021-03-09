@@ -26,10 +26,10 @@ func (parser RtspDescribeResponseParser) FromBaseResponse(rtspResponse responses
 	}
 	content := splitHeaderAndContent[1]
 	content = strings.TrimSpace(content)
-	mediaInfo, err := MediaInformationParser{}.FromString(content)
+	mediaInfo, err := SdpParser{}.FromString(content)
 	if mediaInfo == nil || err != nil {
 		return nil, err
 	}
-	response.MediaInfo = *mediaInfo
+	response.Sdp = *mediaInfo
 	return response, nil
 }

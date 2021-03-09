@@ -1,4 +1,4 @@
-package media
+package sdp
 
 type MediaDescription struct {
 	Media          string

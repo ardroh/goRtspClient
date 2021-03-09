@@ -29,7 +29,7 @@ a=framerate:15.000000
 a=transform:-1.000000,0.000000,0.000000;0.000000,-1.000000,0.000000;0.000000,0.000000,1.000000
 m=audio 57000/2 RTP/AVP 98
 a=test=test`, expectedProtocolVersion)
-	sut := parsers.MediaInformationParser{}
+	sut := parsers.SdpParser{}
 
 	mediaInfo, err := sut.FromString(sdpLiteral)
 

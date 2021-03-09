@@ -4,12 +4,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ardroh/goRtspClient/media"
+	"github.com/ardroh/goRtspClient/sdp"
 )
 
 type RtspDescribeResponse struct {
 	RtspResponse RtspResponse
-	MediaInfo    media.MediaInformation
+	Sdp          sdp.Sdp
 }
 
 func InitRtspDescribeResponse(rtspResponse RtspResponse) *RtspDescribeResponse {

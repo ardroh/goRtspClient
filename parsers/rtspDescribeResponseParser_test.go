@@ -42,7 +42,7 @@ Content-Length: 710
 		t.Fatalf("Failed to parse. Error: %s", err)
 	}
 
-	if parsedResponse.MediaInfo.OriginalLiteral != sdpLiteral {
-		t.Errorf("Can't extract SDP! Received: %d Expected: %d", len(parsedResponse.MediaInfo.OriginalLiteral), len(sdpLiteral))
+	if parsedResponse.Sdp.OriginalLiteral != sdpLiteral {
+		t.Errorf("Can't extract SDP! Received: %d Expected: %d", len(parsedResponse.Sdp.OriginalLiteral), len(sdpLiteral))
 	}
 }

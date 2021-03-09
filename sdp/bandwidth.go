@@ -1,4 +1,4 @@
-package media
+package sdp
 
 type Bandwidth struct {
 	BwType    string

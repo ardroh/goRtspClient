@@ -1,6 +1,6 @@
-package media
+package sdp
 
-type MediaInformation struct {
+type Sdp struct {
 	OriginalLiteral   string
 	ProtocolVersion   int
 	SessionOrigin     SessionOrigin
@@ -11,8 +11,8 @@ type MediaInformation struct {
 	Medias            []MediaDescription
 }
 
-func (mediaInfo MediaInformation) HasSessionAttribute(key string) bool {
-	for _, attr := range mediaInfo.SessionAttributes {
+func (sdp Sdp) HasSessionAttribute(key string) bool {
+	for _, attr := range sdp.SessionAttributes {
 		if attr.Key == key {
 			return true
 		}
@@ -20,8 +20,8 @@ func (mediaInfo MediaInformation) HasSessionAttribute(key string) bool {
 	return false
 }
 
-func (mediaInfo MediaInformation) GetSessionAttribute(key string) string {
-	for _, attr := range mediaInfo.SessionAttributes {
+func (sdp Sdp) GetSessionAttribute(key string) string {
+	for _, attr := range sdp.SessionAttributes {
 		if attr.Key == key {
 			return attr.Value
 		}

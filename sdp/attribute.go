@@ -1,4 +1,4 @@
-package media
+package sdp
 
 type Attribute struct {
 	Key   string

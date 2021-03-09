@@ -1,4 +1,4 @@
-package media
+package sdp
 
 type SessionOrigin struct {
 	Username       string

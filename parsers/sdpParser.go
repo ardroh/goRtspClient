@@ -6,45 +6,45 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ardroh/goRtspClient/media"
+	"github.com/ardroh/goRtspClient/sdp"
 )
 
-type MediaInformationParser struct {
+type SdpParser struct {
 }
 
-func (parser MediaInformationParser) FromString(literal string) (*media.MediaInformation, error) {
-	mediaInformation := &media.MediaInformation{OriginalLiteral: literal}
+func (parser SdpParser) FromString(literal string) (*sdp.Sdp, error) {
+	outputSdp := &sdp.Sdp{OriginalLiteral: literal}
 	lines := strings.Split(literal, "\n")
 	for _, line := range lines {
 		line := strings.TrimSpace(line)
 		if strings.HasPrefix(line, "v=") {
-			mediaInformation.ProtocolVersion = getNumberFromLine(line, "v=(.*)")
+			outputSdp.ProtocolVersion = getNumberFromLine(line, "v=(.*)")
 		} else if strings.HasPrefix(line, "o=") {
 			sessionOrigin := parseSessionOrigin(line)
 			if sessionOrigin == nil {
 				return nil, errors.New("Can't parse session origin!")
 			}
-			mediaInformation.SessionOrigin = *sessionOrigin
+			outputSdp.SessionOrigin = *sessionOrigin
 		} else if strings.HasPrefix(line, "s=") {
 			sessionName := getStringFromLine(line, "s=(.*)")
 			if sessionName == nil {
 				return nil, errors.New("Can't parse session name!")
 			}
-			mediaInformation.SessionName = *sessionName
+			outputSdp.SessionName = *sessionName
 		} else if strings.HasPrefix(line, "i=") {
-			mediaInformation.SessionInfo = getStringFromLine(line, "i=(.*)")
+			outputSdp.SessionInfo = getStringFromLine(line, "i=(.*)")
 		} else if strings.HasPrefix(line, "t=") {
 			timing := parseTiming(line)
 			if timing == nil {
 				return nil, errors.New("Can't parse timings!")
 			}
-			mediaInformation.Timings = append(mediaInformation.Timings, *timing)
+			outputSdp.Timings = append(outputSdp.Timings, *timing)
 		} else if strings.HasPrefix(line, "a=") {
 			attribute := parseAttribute(line)
 			if attribute == nil {
 				return nil, errors.New("Can't parse timings!")
 			}
-			mediaInformation.SessionAttributes = append(mediaInformation.SessionAttributes, *attribute)
+			outputSdp.SessionAttributes = append(outputSdp.SessionAttributes, *attribute)
 		} else if strings.HasPrefix(line, "m=") {
 			break
 		}
@@ -77,13 +77,13 @@ func (parser MediaInformationParser) FromString(literal string) (*media.MediaInf
 		if description == nil {
 			return nil, errors.New("Can't parse media description!")
 		}
-		mediaInformation.Medias = append(mediaInformation.Medias, *description)
+		outputSdp.Medias = append(outputSdp.Medias, *description)
 	}
 
-	return mediaInformation, nil
+	return outputSdp, nil
 }
 
-func parseSessionOrigin(line string) *media.SessionOrigin {
+func parseSessionOrigin(line string) *sdp.SessionOrigin {
 	r, _ := regexp.Compile("o=(.*?) (.*?) (.*?) (.*?) (.*?) (.*)")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 7 {
@@ -93,7 +93,7 @@ func parseSessionOrigin(line string) *media.SessionOrigin {
 	if err != nil {
 		return nil
 	}
-	return &media.SessionOrigin{
+	return &sdp.SessionOrigin{
 		Username:       matches[1],
 		SessionId:      matches[2],
 		SessionVersion: sessionVersion,
@@ -103,7 +103,7 @@ func parseSessionOrigin(line string) *media.SessionOrigin {
 	}
 }
 
-func parseTiming(line string) *media.Timing {
+func parseTiming(line string) *sdp.Timing {
 	r, _ := regexp.Compile("t=(.*?) (.*)")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 3 {
@@ -114,10 +114,10 @@ func parseTiming(line string) *media.Timing {
 	if err != nil {
 		return nil
 	}
-	return &media.Timing{StartTime: startTime, EndTime: endTime}
+	return &sdp.Timing{StartTime: startTime, EndTime: endTime}
 }
 
-func parseAttribute(line string) *media.Attribute {
+func parseAttribute(line string) *sdp.Attribute {
 	r, _ := regexp.Compile("a=(.*?):(.*)")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 3 {
@@ -128,19 +128,19 @@ func parseAttribute(line string) *media.Attribute {
 		}
 	}
 	if len(matches) == 3 {
-		return &media.Attribute{
+		return &sdp.Attribute{
 			Key:   matches[1],
 			Value: matches[2],
 		}
 	} else {
-		return &media.Attribute{
+		return &sdp.Attribute{
 			Key: matches[1],
 		}
 	}
 }
 
-func parseMediaDescription(lines []string) *media.MediaDescription {
-	mediaDescr := &media.MediaDescription{}
+func parseMediaDescription(lines []string) *sdp.MediaDescription {
+	mediaDescr := &sdp.MediaDescription{}
 	for _, line := range lines {
 		line := strings.TrimSpace(line)
 		if strings.HasPrefix(line, "m=") {
@@ -188,7 +188,7 @@ func parseMediaDescription(lines []string) *media.MediaDescription {
 	return mediaDescr
 }
 
-func parseBandwidth(line string) *media.Bandwidth {
+func parseBandwidth(line string) *sdp.Bandwidth {
 	r, _ := regexp.Compile("b=(.*?):(.*)")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 3 {
@@ -198,5 +198,5 @@ func parseBandwidth(line string) *media.Bandwidth {
 	if err != nil {
 		return nil
 	}
-	return &media.Bandwidth{BwType: matches[1], Bandwidth: bandwidthValue}
+	return &sdp.Bandwidth{BwType: matches[1], Bandwidth: bandwidthValue}
 }
