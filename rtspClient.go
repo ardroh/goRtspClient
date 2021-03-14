@@ -11,6 +11,7 @@ import (
 
 	"github.com/ardroh/goRtspClient/auth"
 	"github.com/ardroh/goRtspClient/commands"
+	"github.com/ardroh/goRtspClient/headers"
 	"github.com/ardroh/goRtspClient/parsers"
 	"github.com/ardroh/goRtspClient/responses"
 	"github.com/ardroh/goRtspClient/rtp"
@@ -20,8 +21,8 @@ type RtspConnectionParams struct {
 	IP           string
 	Port         int
 	Path         string
-	Transmission commands.RtspTransmissionType
-	Transport    commands.RtspTransportType
+	Transmission headers.RtspTransmissionType
+	Transport    headers.RtspTransportType
 	Credentials  auth.Credentials
 }
 
@@ -80,15 +81,17 @@ func (client *rtspClient) Connect() error {
 	if len(controlUris) > 0 {
 		client.controlUri = &controlUris[len(controlUris)-1]
 	}
-	if client.connectionParams.Transport != commands.RtpAvpTcp || client.connectionParams.Transmission != commands.Unicast {
+	if client.connectionParams.Transport != headers.RtpAvpTcp || client.connectionParams.Transmission != headers.Unicast {
 		return errors.New("unsupported transport or transmission")
 	}
 	setupCmd := commands.RtspSetupCommand{
-		Transport:    client.connectionParams.Transport,
-		Transmission: client.connectionParams.Transmission,
-		InterleavedPair: commands.InterleavedPair{
-			RangeMin: 0,
-			RangeMax: 1,
+		TransportHeader: headers.TransportHeader{
+			TransportType:    client.connectionParams.Transport,
+			TransmissionType: client.connectionParams.Transmission,
+			InterleavedPair: &headers.InterleavedPair{
+				RangeMin: 0,
+				RangeMax: 1,
+			},
 		},
 	}
 	response, sendErr = client.send(setupCmd)
@@ -99,10 +102,10 @@ func (client *rtspClient) Connect() error {
 	if parseError != nil {
 		return parseError
 	}
-	client.sessionID = setupResp.SessionInfo.Id
-	client.timeout = setupResp.SessionInfo.Timeout
+	client.sessionID = setupResp.SessionHeader.Id
+	client.timeout = setupResp.SessionHeader.Timeout
 	playCmd := commands.RtspPlayCommand{
-		SessionID: setupResp.SessionInfo.Id,
+		SessionID: setupResp.SessionHeader.Id,
 	}
 	response, sendErr = client.send(playCmd)
 	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {

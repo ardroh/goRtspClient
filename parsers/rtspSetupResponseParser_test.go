@@ -15,21 +15,9 @@ Session: LZoqIul0P3odd1lb; timeout=60
 Date: Sun, 11 Oct 2020 14:46:29 GMT`
 	sut := parsers.RtspSetupResponseParser{}
 
-	parsedResponse, err := sut.FromString(responseLiteral)
+	_, err := sut.FromString(responseLiteral)
 
 	if err != nil {
 		t.Fatalf("Error during parsing: %s", err)
-	}
-
-	if parsedResponse == nil {
-		t.Fatal("Can't parse response")
-	}
-
-	if parsedResponse.SessionInfo.Timeout != 60 {
-		t.Errorf("Can't parse timeout!")
-	}
-
-	if parsedResponse.SessionInfo.Id != "LZoqIul0P3odd1lb" {
-		t.Errorf("Can't parse session ID!")
 	}
 }

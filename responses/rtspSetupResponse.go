@@ -1,11 +1,9 @@
 package responses
 
-type SessionInfo struct {
-	Timeout int
-	Id      string
-}
+import "github.com/ardroh/goRtspClient/headers"
 
 type RtspSetupResponse struct {
-	RtspResponse RtspResponse
-	SessionInfo  SessionInfo
+	RtspResponse  RtspResponse
+	SessionHeader headers.SessionHeader
+	Transport     headers.TransportHeader
 }

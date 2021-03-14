@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/ardroh/goRtspClient/commands"
+	"github.com/ardroh/goRtspClient/headers"
 	"github.com/ardroh/goRtspClient/parsers"
 )
 
@@ -20,13 +21,15 @@ func (thisHandler rtspSetupHandler) Handle(request *RtspConnectRequest) {
 	}
 	var setupCmd commands.RtspSetupCommand
 	switch request.Transport {
-	case commands.RtpAvpTcp:
+	case headers.RtpAvpTcp:
 		setupCmd = commands.RtspSetupCommand{
-			Transport:    request.Transport,
-			Transmission: request.Transmission,
-			InterleavedPair: commands.InterleavedPair{
-				RangeMin: 0,
-				RangeMax: 1,
+			TransportHeader: headers.TransportHeader{
+				TransportType:    request.Transport,
+				TransmissionType: request.Transmission,
+				InterleavedPair: &headers.InterleavedPair{
+					RangeMin: 0,
+					RangeMax: 1,
+				},
 			},
 		}
 	default:
@@ -36,8 +39,8 @@ func (thisHandler rtspSetupHandler) Handle(request *RtspConnectRequest) {
 	if response == nil || err != nil {
 		return
 	}
-	parsedSetup, err := parsers.RtspSetupResponseParser{}.FromBaseResponse(*response)
-	if parsedSetup == nil || err != nil {
+	_, err = parsers.RtspSetupResponseParser{}.FromBaseResponse(*response)
+	if err != nil {
 		return
 	}
 	thisHandler.callNext(request)
