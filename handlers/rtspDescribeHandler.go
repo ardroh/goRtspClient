@@ -23,7 +23,11 @@ func (thisHandler rtspDescribeHandler) Handle(request *RtspConnectRequest) {
 	if response == nil || err != nil {
 		return
 	}
-	parsers.RtspDescribeResponseParser{}.FromBaseResponse(*response)
+	parsedDescribe, err := parsers.RtspDescribeResponseParser{}.FromBaseResponse(*response)
+	if parsedDescribe == nil || err != nil {
+		return
+	}
+	request.Sdp = parsedDescribe.Sdp
 	thisHandler.callNext(request)
 }
 

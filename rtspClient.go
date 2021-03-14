@@ -95,11 +95,14 @@ func (client *rtspClient) Connect() error {
 	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
 		return sendErr
 	}
-	setupResp := responses.InitRtspSetupResponse(*response)
-	client.sessionID = setupResp.GetSession()
-	client.timeout = setupResp.GetTimeout()
+	setupResp, parseError := parsers.RtspSetupResponseParser{}.FromBaseResponse(*response)
+	if parseError != nil {
+		return parseError
+	}
+	client.sessionID = setupResp.SessionInfo.Id
+	client.timeout = setupResp.SessionInfo.Timeout
 	playCmd := commands.RtspPlayCommand{
-		SessionID: setupResp.GetSession(),
+		SessionID: setupResp.SessionInfo.Id,
 	}
 	response, sendErr = client.send(playCmd)
 	if sendErr != nil || response.GetStatusCode() != responses.RtspOk {
