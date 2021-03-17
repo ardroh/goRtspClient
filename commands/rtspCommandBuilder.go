@@ -11,6 +11,7 @@ type RtspCommandBuilder struct {
 	Cseq        int
 	Address     string
 	AuthHeader  auth.RtspAuthHeader
+	Credentials auth.Credentials
 	RtspCommand RtspCommand
 	ContentBase *string
 }
@@ -25,7 +26,7 @@ func (builder RtspCommandBuilder) BuildString() string {
 		if builder.ContentBase != nil {
 			authAddress = *builder.ContentBase
 		}
-		sb.WriteString(builder.AuthHeader.String(string(builder.RtspCommand.GetCommandType()), authAddress) + "\n")
+		sb.WriteString(builder.AuthHeader.String(string(builder.RtspCommand.GetCommandType()), authAddress, builder.Credentials) + "\n")
 	}
 	sb.WriteString(builder.RtspCommand.GetParamsString())
 	sb.WriteString("\n")

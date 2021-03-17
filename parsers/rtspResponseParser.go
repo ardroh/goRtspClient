@@ -1,8 +1,10 @@
 package parsers
 
 import (
+	"regexp"
 	"strings"
 
+	"github.com/ardroh/goRtspClient/auth"
 	"github.com/ardroh/goRtspClient/responses"
 )
 
@@ -31,7 +33,36 @@ func (parser RtspResponseParser) Parse(responseLiteral string) (responses.RtspRe
 			response.Server = getStringFromLine(line, "Server: (.*)")
 		} else if strings.HasPrefix(line, "Date:") {
 			response.DateTime = getRtspDateParserFromLine(line, "Date: (.*)")
+		} else if strings.HasPrefix(line, "WWW-Authenticate") {
+			authHeader := parseAuthHeader(line)
+			if authHeader != nil {
+				response.AuthHeaders = append(response.AuthHeaders, authHeader)
+			}
 		}
 	}
 	return response, nil
+}
+
+func getRealm(authString string) string {
+	r, _ := regexp.Compile("realm=\"(.*?)\"")
+	matches := r.FindStringSubmatch(authString)
+	return matches[1]
+}
+
+func getNonce(authString string) string {
+	r, _ := regexp.Compile("nonce=\"(.*?)\"")
+	matches := r.FindStringSubmatch(authString)
+	return matches[1]
+}
+
+func parseAuthHeader(line string) auth.RtspAuthHeader {
+	r, _ := regexp.Compile("(WWW-Authenticate:) (.*)")
+	matches := r.FindStringSubmatch(line)
+	if len(matches) < 1 {
+		return nil
+	}
+	if strings.Contains(matches[2], "Basic") {
+		return auth.BuildRtspAuthHeader(auth.RatBasic, nil, nil)
+	}
+	return auth.BuildRtspAuthHeader(auth.RatBasic, nil, nil)
 }
