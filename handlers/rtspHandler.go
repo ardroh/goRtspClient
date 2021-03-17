@@ -1,6 +1,6 @@
 package handlers
 
 type rtspHandler interface {
-	SetNext(handler *rtspHandler)
+	SetNext(handler rtspHandler)
 	Handle(request *RtspConnectRequest)
 }

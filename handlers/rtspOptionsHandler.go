@@ -11,11 +11,11 @@ type rtspOptionsHandler struct {
 	next rtspHandler
 }
 
-func (thisHandler rtspOptionsHandler) SetNext(nextHandler rtspHandler) {
+func (thisHandler *rtspOptionsHandler) SetNext(nextHandler rtspHandler) {
 	thisHandler.next = nextHandler
 }
 
-func (thisHandler rtspOptionsHandler) Handle(request *RtspConnectRequest) {
+func (thisHandler *rtspOptionsHandler) Handle(request *RtspConnectRequest) {
 	optionsCmd := commands.RtspOptionsCommand{}
 	response, err := request.RtspClient.SendCommand(optionsCmd)
 	if response == nil || err != nil {

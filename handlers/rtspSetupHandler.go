@@ -10,12 +10,12 @@ type rtspSetupHandler struct {
 	next rtspHandler
 }
 
-func (thisHandler rtspSetupHandler) SetNext(nextHandler rtspHandler) {
+func (thisHandler *rtspSetupHandler) SetNext(nextHandler rtspHandler) {
 	thisHandler.next = nextHandler
 }
 
-func (thisHandler rtspSetupHandler) Handle(request *RtspConnectRequest) {
-	if !request.HasMethod(commands.Describe) {
+func (thisHandler *rtspSetupHandler) Handle(request *RtspConnectRequest) {
+	if !request.HasMethod(commands.Setup) {
 		thisHandler.callNext(request)
 		return
 	}
@@ -39,10 +39,13 @@ func (thisHandler rtspSetupHandler) Handle(request *RtspConnectRequest) {
 	if response == nil || err != nil {
 		return
 	}
-	_, err = parsers.RtspSetupResponseParser{}.FromBaseResponse(*response)
+	parsedResponse, err := parsers.RtspSetupResponseParser{}.FromBaseResponse(*response)
 	if err != nil {
 		return
 	}
+	request.Session = parsedResponse.SessionHeader
+	request.RtspClient.GetContext().SessionHeader = parsedResponse.SessionHeader
+	request.RtspClient.StartListening(parsedResponse.Transport)
 	thisHandler.callNext(request)
 }
 

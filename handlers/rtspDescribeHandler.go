@@ -9,11 +9,11 @@ type rtspDescribeHandler struct {
 	next rtspHandler
 }
 
-func (thisHandler rtspDescribeHandler) SetNext(nextHandler rtspHandler) {
+func (thisHandler *rtspDescribeHandler) SetNext(nextHandler rtspHandler) {
 	thisHandler.next = nextHandler
 }
 
-func (thisHandler rtspDescribeHandler) Handle(request *RtspConnectRequest) {
+func (thisHandler *rtspDescribeHandler) Handle(request *RtspConnectRequest) {
 	if !request.HasMethod(commands.Describe) {
 		thisHandler.callNext(request)
 		return
