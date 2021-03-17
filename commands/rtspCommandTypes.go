@@ -7,8 +7,8 @@ const (
 	Describe                      = "DESCRIBE"
 	GetParameter                  = "GET_PARAMETER"
 	Pause                         = "PAUSE"
-	Play                          = "Play"
-	Setup                         = "Setup"
+	Play                          = "PLAY"
+	Setup                         = "SETUP"
 	SetParameter                  = "SET_PARAMETER"
 	Teardown                      = "TEARDOWN"
 )
