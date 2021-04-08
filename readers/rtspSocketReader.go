@@ -5,9 +5,9 @@ import (
 	"log"
 	"net"
 
+	"github.com/ardroh/goRtspClient/data"
 	"github.com/ardroh/goRtspClient/parsers"
 	"github.com/ardroh/goRtspClient/responses"
-	"github.com/ardroh/goRtspClient/rtp"
 )
 
 func peekIsRtspMessage(reader *bufio.Reader) (bool, error) {
@@ -21,14 +21,14 @@ func peekIsRtspMessage(reader *bufio.Reader) (bool, error) {
 
 type RtspSocketReader struct {
 	conn             net.Conn
-	RtpPacketChan    chan rtp.RtpPacket
+	DataPacketChan   chan data.DataPacket
 	RtspResponseChan chan responses.RtspResponse
 }
 
 func CreateRtspConnReader(conn net.Conn) *RtspSocketReader {
 	return &RtspSocketReader{
 		conn:             conn,
-		RtpPacketChan:    make(chan rtp.RtpPacket),
+		DataPacketChan:   make(chan data.DataPacket),
 		RtspResponseChan: make(chan responses.RtspResponse),
 	}
 }
@@ -80,7 +80,7 @@ func (reader *RtspSocketReader) StartReading() {
 }
 
 func (reader *RtspSocketReader) handleBinaryData(buffer []byte) {
-	reader.RtpPacketChan <- rtp.RtpPacket{
+	reader.DataPacketChan <- data.DataPacket{
 		Buffer: buffer,
 		Size:   len(buffer),
 	}

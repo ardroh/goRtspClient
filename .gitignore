@@ -1,2 +1,3 @@
 .bin
 *_debug_test.go
+.vscode/launch.json

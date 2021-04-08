@@ -2,40 +2,51 @@
 
 goRtspClient is golang library for dealing with the RTSP communication.
 
+## Version
+
+**Actual version**: 0.1-alpha
+
 ## Installation
 
-```bash
-go get https://github.com/ardroh/goRtspClient
-```
+```TBD```
 
 ## Usage
 
-goRtspClient for now supports only __RtpAvpTcp__ and __Unicast__.
+goRtspClient for now supports only __RtpAvpTcp__ with basic and digest authentication.
 
 ```go
-rtspClient := goRtspClient.InitRtspClient(goRtspClient.RtspConnectionParams{
-    IP:           "192.168.0.10",
-    Port:         554,
-    Path:         "some-path",
-    Transport:    commands.RtpAvpTcp,
-    Transmission: commands.Unicast,
-})
 
-connectError := rtspClient.connect()
-if connectError != nil {
-    //(...) error handling
-}
-for {
-        packet := <-rtspClient.GetReadChan()
-        //(...) do something with a packet
-}
-//(...)
-rtspClient.disconnect()
+    connectParams := client.RtspConnectionParams{
+            IP:           "192.168.0.5",
+            Port:         554,
+            Path:         "rtspPath",
+            Transport:    headers.RtpAvpTcp,
+            Transmission: headers.Unicast,
+            Credentials:  auth.Credentials{
+                Username: "admin",
+                Password: "password"
+            },
+        }
+	rtspClient := RtspClient{}
+
+	connectError := rtspClient.Connect(connectParams)
+
+	if connectError != nil {
+		//(...) Error handling
+	}
+
+	go doSomethingWithData(rtspClient.DataPacketChan)
+
+	//(...)
+
+	rtspClient.Disconnect()
 ```
 
 ## To Do
-- Basic authentication
-- Digest authentication
+- ~~Basic authentication~~
+- ~~Digest authentication~~
+- ~~RTP over RTSP (interleaved)~~
+- Go module release
 - Unicast support
 - Multicast support
 
